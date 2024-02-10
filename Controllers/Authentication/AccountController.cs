@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.CodeAnalysis;
 using System.Text;
 
 namespace Auth_WebApplication.Controllers.Authentication
@@ -17,7 +18,7 @@ namespace Auth_WebApplication.Controllers.Authentication
         private readonly IWebHostEnvironment webHostEnvironment;
         private readonly IConfiguration configuration;
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender,IWebHostEnvironment webHostEnvironment,IConfiguration configuration)
+        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender, IWebHostEnvironment webHostEnvironment, IConfiguration configuration)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
@@ -57,7 +58,7 @@ namespace Auth_WebApplication.Controllers.Authentication
                     var result = await userManager.CreateAsync(user, model.Password);
                     if (result.Succeeded)
                     {
-                        
+
                         bool status = await emailSender.EmailSendAsync(model.Email, "User Registration", await GetEmailBody(model.Email));
                         await signInManager.SignInAsync(user, isPersistent: false);
                         return RedirectToAction("Index", "Home");
@@ -134,5 +135,75 @@ namespace Auth_WebApplication.Controllers.Authentication
             return htmlStrig;
         }
 
+        public IActionResult ForgetPassword()
+        {
+
+            return View();
+        }
+        [HttpPost]
+        public async Task<IActionResult> ForgetPassword(ForgetPasswordOrUsernameVM forget)
+        {
+            ModelState.Remove("UserId");
+            ModelState.Remove("Password");
+            ModelState.Remove("ConfirmPassword");
+            ModelState.Remove("Token");
+            if (!ModelState.IsValid)
+            {
+                return View(forget);
+            }
+            var user = await userManager.FindByEmailAsync(forget.Email);
+            if (user != null)
+            {
+                var code = await userManager.GeneratePasswordResetTokenAsync(user);
+                var callbackUrl = Url.Action("ResetPassword", "Account", new { userId = user.Id, Token = code },
+                    protocol: Request.Scheme);
+                bool isSendEmail = await emailSender.EmailSendAsync(forget.Email, "Reset Password", "Please reset your password by clicking <a style='background-color:#04aa6d; border:none; color:white; padding:10px; text-align:center; text-decoration:none;dilplay:inline-block; font-size:16px; margin:4px 2px; cursor:pointer; border-radius:10px;' href=\""+callbackUrl+"\">Click Here</a>");
+                if (isSendEmail)
+                {
+                    Response response = new Response();
+                    response.Message = "Reset Password Link";
+                    return RedirectToAction("ForgetPasswordConfirmation", "Account", response);
+                }
+            }
+            return View();
+        }
+
+        public IActionResult ForgetPasswordConfirmation(Response response)
+        {
+            return View(response);
+        }
+
+        public IActionResult ResetPassword(string userId, string Token)
+        {
+            var model = new ForgetPasswordOrUsernameVM
+            {
+                Token = Token,
+                UserId = userId
+            };
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult>ResetPassword(ForgetPasswordOrUsernameVM forget)
+        {
+            Response response = new Response();
+            ModelState.Remove("Email");
+            if (!ModelState.IsValid)
+            {
+                return View(forget);
+            }
+            var user = await userManager.FindByIdAsync(forget.UserId);
+            if (user == null)
+            {
+                return View(forget);
+            }
+            var result = await userManager.ResetPasswordAsync(user, forget.Token, forget.Password);
+            if (result.Succeeded)
+            {
+                response.Message = "Your password has been successfully Reset";
+                return RedirectToAction("ForgetPasswordConfirmation", response);
+            }
+            return View(forget);
+        }
     }
 }

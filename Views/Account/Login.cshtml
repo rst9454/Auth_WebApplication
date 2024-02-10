@@ -23,8 +23,18 @@
             <input type="checkbox" id="rememberMe" asp-for="RememberMe" /> Remember Me
         </label>
     </div>
-    <div class="float-end">
-        <button id="btnLogin" type="submit" class="btn btn-primary m-2">LogIn</button>
+    <div class="mb-3">
+        <div class="row">
+            <div class="col-6">
+                <a asp-action="ForgetPassword" asp-controller="Account" class="float-end btn btn-sm btn-outline-primary">Forget Password</a>
+            </div>
+            <div class="col-6">
+                <a asp-action="ForgetUsername" asp-controller="Account" class="btn btn-sm btn-outline-primary">Forget Username</a>
+            </div>
+        </div>
+    </div>
+    <div class="d-grid">
+        <button id="btnLogin" type="submit" class="btn btn-primary btn-block m-2">LogIn</button>
     </div>
 </form>
 @section scripts{
