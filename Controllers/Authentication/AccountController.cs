@@ -58,8 +58,8 @@ namespace Auth_WebApplication.Controllers.Authentication
                     var result = await userManager.CreateAsync(user, model.Password);
                     if (result.Succeeded)
                     {
-
-                        bool status = await emailSender.EmailSendAsync(model.Email, "User Registration", await GetEmailBody(model.Email));
+                        string emailBody = await GetEmailBody(model.Email, "User Registration", "", "Welcome");
+                        bool status = await emailSender.EmailSendAsync(model.Email, "User Registration", emailBody);
                         await signInManager.SignInAsync(user, isPersistent: false);
                         return RedirectToAction("Index", "Home");
                     }
@@ -81,8 +81,9 @@ namespace Auth_WebApplication.Controllers.Authentication
             return View(model);
         }
 
-        public IActionResult Login()
+        public async Task<IActionResult> Login()
         {
+            await Logout();
             return View();
         }
         [HttpPost]
@@ -124,14 +125,15 @@ namespace Auth_WebApplication.Controllers.Authentication
             await signInManager.SignOutAsync();
             return RedirectToAction("Login", "Account");
         }
-        public async Task<string> GetEmailBody(string username)
+        public async Task<string> GetEmailBody(string? username, string? title, string? callbackUrl, string? EmailTemplateName)
         {
             string url = configuration.GetValue<string>("Urls:LoginUrl");
-            string path = Path.Combine(webHostEnvironment.WebRootPath, "Template/Welcome.cshtml");
+            string path = Path.Combine(webHostEnvironment.WebRootPath, "Template/" + EmailTemplateName + ".cshtml");
             string htmlStrig = System.IO.File.ReadAllText(path);
-            htmlStrig = htmlStrig.Replace("{{title}}", "User Registration");
+            htmlStrig = htmlStrig.Replace("{{title}}", title);
             htmlStrig = htmlStrig.Replace("{{Username}}", username);
             htmlStrig = htmlStrig.Replace("{{url}}", url);
+            htmlStrig = htmlStrig.Replace("{{callbackUrl}}", callbackUrl);
             return htmlStrig;
         }
 
@@ -157,7 +159,9 @@ namespace Auth_WebApplication.Controllers.Authentication
                 var code = await userManager.GeneratePasswordResetTokenAsync(user);
                 var callbackUrl = Url.Action("ResetPassword", "Account", new { userId = user.Id, Token = code },
                     protocol: Request.Scheme);
-                bool isSendEmail = await emailSender.EmailSendAsync(forget.Email, "Reset Password", "Please reset your password by clicking <a style='background-color:#04aa6d; border:none; color:white; padding:10px; text-align:center; text-decoration:none;dilplay:inline-block; font-size:16px; margin:4px 2px; cursor:pointer; border-radius:10px;' href=\""+callbackUrl+"\">Click Here</a>");
+                string emailBody = await GetEmailBody("", "Reset Password", callbackUrl, "ResetPassword");
+
+                bool isSendEmail = await emailSender.EmailSendAsync(forget.Email, "Reset Password", emailBody);
                 if (isSendEmail)
                 {
                     Response response = new Response();
@@ -184,7 +188,7 @@ namespace Auth_WebApplication.Controllers.Authentication
         }
 
         [HttpPost]
-        public async Task<IActionResult>ResetPassword(ForgetPasswordOrUsernameVM forget)
+        public async Task<IActionResult> ResetPassword(ForgetPasswordOrUsernameVM forget)
         {
             Response response = new Response();
             ModelState.Remove("Email");
