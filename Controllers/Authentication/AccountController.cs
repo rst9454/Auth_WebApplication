@@ -40,6 +40,7 @@ namespace Auth_WebApplication.Controllers.Authentication
         [HttpPost]
         public async Task<IActionResult> Register(RegisterVM model)
         {
+            Response response = new Response();
             try
             {
                 if (ModelState.IsValid)
@@ -58,9 +59,18 @@ namespace Auth_WebApplication.Controllers.Authentication
                     var result = await userManager.CreateAsync(user, model.Password);
                     if (result.Succeeded)
                     {
-                        string emailBody = await GetEmailBody(model.Email, "User Registration", "", "Welcome");
-                        bool status = await emailSender.EmailSendAsync(model.Email, "User Registration", emailBody);
-                        await signInManager.SignInAsync(user, isPersistent: false);
+                        var userId = await userManager.GetUserIdAsync(user);
+                        var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
+                        var confirmationLink = Url.Action("ConfirmMail", "Account", new { userId = userId, Token = code },
+                            protocol: Request.Scheme);
+                        string emailBody =  GetEmailBody(model.Email, "Email Confirmation", confirmationLink, "EmailConfirmation");
+                        bool status = await emailSender.EmailSendAsync(model.Email, "Email Confirmation", emailBody);
+                        if (status)
+                        {
+                            response.Message = "Please check your email for the verification action.";
+                            return RedirectToAction("ForgetPasswordConfirmation", "Account", response);
+                        }
+                        //await signInManager.SignInAsync(user, isPersistent: false);
                         return RedirectToAction("Index", "Home");
                     }
                     if (result.Errors.Count() > 0)
@@ -79,6 +89,29 @@ namespace Auth_WebApplication.Controllers.Authentication
                 throw;
             }
             return View(model);
+        }
+        [HttpGet]
+        public async Task<IActionResult> ConfirmMail(string userId, string Token)
+        {
+            Response response = new Response();
+            if(userId!=null && Token != null)
+            {
+                var user = await userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return View("Error");
+                }
+                else
+                {
+                    var result = await userManager.ConfirmEmailAsync(user, Token);
+                    if (result.Succeeded)
+                    {
+                        response.Message = "Thank you for confirming your eamil.";
+                        return RedirectToAction("ForgetPasswordConfirmation", "Account", response);
+                    }
+                }
+            }
+            return View("Error");
         }
 
         public async Task<IActionResult> Login()
@@ -101,15 +134,26 @@ namespace Auth_WebApplication.Controllers.Authentication
                     }
                     if (await userManager.CheckPasswordAsync(checkEmail, model.Password) == false)
                     {
-                        ModelState.AddModelError(string.Empty, "Invalid Credentials");
+                        ModelState.AddModelError(string.Empty, "Incorrect Password");
                         return View(model);
                     }
-                    var result = await signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
-                    if (result.Succeeded)
+                    bool confirmStatus = await userManager.IsEmailConfirmedAsync(checkEmail);
+                    if (!confirmStatus)
                     {
-                        return RedirectToAction("Index", "Home");
+                        ModelState.AddModelError("", "Email not confirmed");
+                        return View(model);
                     }
-                    ModelState.AddModelError(string.Empty, "Invalid Login Attempt");
+                    else
+                    {
+                        var result = await signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
+                        if (result.Succeeded)
+                        {
+                            return RedirectToAction("Index", "Home");
+                        }
+                        ModelState.AddModelError(string.Empty, "Invalid Login Attempt");
+                    }
+
+                    
                 }
             }
             catch (Exception)
@@ -125,7 +169,7 @@ namespace Auth_WebApplication.Controllers.Authentication
             await signInManager.SignOutAsync();
             return RedirectToAction("Login", "Account");
         }
-        public async Task<string> GetEmailBody(string? username, string? title, string? callbackUrl, string? EmailTemplateName)
+        public string GetEmailBody(string? username, string? title, string? callbackUrl, string? EmailTemplateName)
         {
             string url = configuration.GetValue<string>("Urls:LoginUrl");
             string path = Path.Combine(webHostEnvironment.WebRootPath, "Template/" + EmailTemplateName + ".cshtml");
@@ -159,7 +203,7 @@ namespace Auth_WebApplication.Controllers.Authentication
                 var code = await userManager.GeneratePasswordResetTokenAsync(user);
                 var callbackUrl = Url.Action("ResetPassword", "Account", new { userId = user.Id, Token = code },
                     protocol: Request.Scheme);
-                string emailBody = await GetEmailBody("", "Reset Password", callbackUrl, "ResetPassword");
+                string emailBody =  GetEmailBody("", "Reset Password", callbackUrl, "ResetPassword");
 
                 bool isSendEmail = await emailSender.EmailSendAsync(forget.Email, "Reset Password", emailBody);
                 if (isSendEmail)

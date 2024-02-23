@@ -13,7 +13,10 @@ builder.Services.AddDbContext<ApplicationContext>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("Auth_WebApplication"));
 });
 
-builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationContext>().AddDefaultTokenProviders();
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(option =>
+    option.SignIn.RequireConfirmedEmail = true
+    ).AddEntityFrameworkStores<ApplicationContext>().AddDefaultTokenProviders();
+
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.ConfigureApplicationCookie(option =>
 {
