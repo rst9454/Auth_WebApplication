@@ -16,5 +16,17 @@ namespace Auth_WebApplication.ViewModels
         [Compare("Password",ErrorMessage ="Password and Confirm Password not matched.")]
         public string ConfirmPassword { get; set; }=default!;
 
+        [Display(Name ="First Name")]
+        public string? FirstName { get; set; }
+        [Display(Name = "Last Name")]
+        public string? LastName { get; set; }
+        public string? Gender { get; set; }
+        [Display(Name = "Birth Date")]
+        public DateTime? BirthDate { get; set; }
+        public DateTime? CreatedOn { get; set; } = DateTime.Now;
+        public DateTime? ModifiedOn { get; set; } = DateTime.Now;
+        [Display(Name = "Active")]
+        public bool Status { get; set; }
+        public string Username { get; set; } = default!;
     }
 }

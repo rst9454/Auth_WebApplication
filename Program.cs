@@ -1,4 +1,5 @@
 using Auth_WebApplication.Data;
+using Auth_WebApplication.Models.IdentityModel;
 using Auth_WebApplication.Repostory.Interface;
 using Auth_WebApplication.Repostory.Service;
 using Microsoft.AspNetCore.Identity;
@@ -13,7 +14,7 @@ builder.Services.AddDbContext<ApplicationContext>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("Auth_WebApplication"));
 });
 
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(option =>
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(option =>
     option.SignIn.RequireConfirmedEmail = true
     ).AddEntityFrameworkStores<ApplicationContext>().AddDefaultTokenProviders();
 

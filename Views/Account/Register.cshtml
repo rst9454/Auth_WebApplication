@@ -2,17 +2,63 @@
 @{
     ViewData["Title"] = "Register";
     Layout = "~/Views/Shared/_LayoutLR.cshtml";
+    var today = DateTime.Now.Date.ToString("yyyy-MM-dd");
 }
 
 <form method="post" asp-action="Register" asp-controller="Account">
     <h3 class="text-muted mb-1 text-center" style="font-size:20px;">Create An Account</h3>
     <hr />
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <div class="mb-3">
-        <label class="mb-2" asp-for="Email"></label><span class="text-danger">*</span>
-        <input type="email" class="form-control" asp-for="Email" autocomplete="Email" placeholder="Enter email" />
-        <span asp-validation-for="Email" class="text-danger"></span>
+    <div class="row">
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="FirstName"></label><span class="text-danger">*</span>
+                <input type="text" class="form-control" asp-for="FirstName" autocomplete="Email" placeholder="Enter first name" />
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="LastName"></label><span class="text-danger">*</span>
+                <input type="text" class="form-control" asp-for="LastName" autocomplete="Email" placeholder="Enter last name" />
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+        </div>
     </div>
+    <div class="row">
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="Gender"></label><span class="text-danger">*</span>
+                <select asp-for="Gender" class="form-control">
+                    <option value="0">--Select Gender--</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Ohter</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-6">
+            <label class="mb-2" asp-for="BirthDate"></label><span class="text-danger">*</span>
+            <input type="date" max="@today" id="BirthDate" class="form-control" asp-for="BirthDate" placeholder="dd/MM/yyyy" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="Username"></label><span class="text-danger">*</span>
+                <input type="text" class="form-control" asp-for="Username" placeholder="Enter username" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="Email"></label><span class="text-danger">*</span>
+                <input type="email" class="form-control" asp-for="Email" autocomplete="Email" placeholder="Enter email" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
     <div class="mb-3">
         <label class="mb-2" asp-for="Password"></label><span class="text-danger">*</span>
         <input type="password" class="form-control" asp-for="Password" placeholder="Enter password" />
@@ -23,10 +69,23 @@
         <input type="password" class="form-control" asp-for="ConfirmPassword" placeholder="Enter confirm password" />
         <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
     </div>
-    <div class="float-end">
+
+    <div class="mb-3">
+        <label>
+            <input type="checkbox" asp-for="Status" checked="checked" class="form-check-inline" /><label asp-for="Status" class="form-label mb-2"></label>
+        </label>
+    </div>
+
+    <div class="d-grid">
         <button type="submit" class="btn btn-primary m-2">Register</button>
     </div>
 </form>
 @section scripts{
     <partial name="_ValidationScriptsPartial.cshtml" />
+    @*  <script>
+        $(document).ready(function () {
+            let today = new Date().toISOString().split('T')[0];
+            document.getElementById('BirthDate').setAttribute('max', today);
+        });
+    </script> *@
 }

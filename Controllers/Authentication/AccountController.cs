@@ -1,4 +1,6 @@
-﻿using Auth_WebApplication.Repostory.Interface;
+﻿using Auth_WebApplication.Data;
+using Auth_WebApplication.Models.IdentityModel;
+using Auth_WebApplication.Repostory.Interface;
 using Auth_WebApplication.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.RenderTree;
@@ -12,19 +14,21 @@ namespace Auth_WebApplication.Controllers.Authentication
 {
     public class AccountController : Controller
     {
-        private readonly UserManager<IdentityUser> userManager;
-        private readonly SignInManager<IdentityUser> signInManager;
+        private readonly UserManager<ApplicationUser> userManager;
+        private readonly SignInManager<ApplicationUser> signInManager;
         private readonly IEmailSender emailSender;
         private readonly IWebHostEnvironment webHostEnvironment;
         private readonly IConfiguration configuration;
+        private readonly ApplicationContext context;
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender, IWebHostEnvironment webHostEnvironment, IConfiguration configuration)
+        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IEmailSender emailSender, IWebHostEnvironment webHostEnvironment, IConfiguration configuration, ApplicationContext context)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
             this.emailSender = emailSender;
             this.webHostEnvironment = webHostEnvironment;
             this.configuration = configuration;
+            this.context = context;
         }
         [Authorize]
         public IActionResult Index()
@@ -43,6 +47,7 @@ namespace Auth_WebApplication.Controllers.Authentication
             Response response = new Response();
             try
             {
+                ModelState.Remove("ModifiedOn");
                 if (ModelState.IsValid)
                 {
                     var chkEmail = await userManager.FindByEmailAsync(model.Email);
@@ -51,10 +56,22 @@ namespace Auth_WebApplication.Controllers.Authentication
                         ModelState.AddModelError(string.Empty, "Email already exist");
                         return View(model);
                     }
-                    var user = new IdentityUser
+                    var isUsernameExist = context.Users.Where(e => e.UserName == model.Username).Any();
+                    if (isUsernameExist)
                     {
-                        UserName = model.Email,
-                        Email = model.Email
+                        ModelState.AddModelError("", "Username not available");
+                        return View(model);
+                    }
+
+                    var user = new ApplicationUser
+                    {
+                        UserName = model.Username,
+                        Email = model.Email,
+                        FirstName=model.FirstName,
+                        LastName=model.LastName,
+                        Gender=model.Gender,
+                        Status=model.Status,
+                        BirthDate=model.BirthDate
                     };
                     var result = await userManager.CreateAsync(user, model.Password);
                     if (result.Succeeded)
@@ -63,7 +80,7 @@ namespace Auth_WebApplication.Controllers.Authentication
                         var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
                         var confirmationLink = Url.Action("ConfirmMail", "Account", new { userId = userId, Token = code },
                             protocol: Request.Scheme);
-                        string emailBody =  GetEmailBody(model.Email, "Email Confirmation", confirmationLink, "EmailConfirmation");
+                        string emailBody = GetEmailBody(model.Email, "Email Confirmation", confirmationLink, "EmailConfirmation");
                         bool status = await emailSender.EmailSendAsync(model.Email, "Email Confirmation", emailBody);
                         if (status)
                         {
@@ -94,7 +111,7 @@ namespace Auth_WebApplication.Controllers.Authentication
         public async Task<IActionResult> ConfirmMail(string userId, string Token)
         {
             Response response = new Response();
-            if(userId!=null && Token != null)
+            if (userId != null && Token != null)
             {
                 var user = await userManager.FindByIdAsync(userId);
                 if (user == null)
@@ -126,7 +143,7 @@ namespace Auth_WebApplication.Controllers.Authentication
             {
                 if (ModelState.IsValid)
                 {
-                    IdentityUser checkEmail = await userManager.FindByEmailAsync(model.Email);
+                    ApplicationUser checkEmail = await userManager.FindByEmailAsync(model.Email);
                     if (checkEmail == null)
                     {
                         ModelState.AddModelError(string.Empty, "Email not found");
@@ -145,7 +162,7 @@ namespace Auth_WebApplication.Controllers.Authentication
                     }
                     else
                     {
-                        var result = await signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
+                        var result = await signInManager.PasswordSignInAsync(checkEmail.UserName, model.Password, model.RememberMe, lockoutOnFailure: false);
                         if (result.Succeeded)
                         {
                             return RedirectToAction("Index", "Home");
@@ -153,7 +170,7 @@ namespace Auth_WebApplication.Controllers.Authentication
                         ModelState.AddModelError(string.Empty, "Invalid Login Attempt");
                     }
 
-                    
+
                 }
             }
             catch (Exception)
@@ -203,7 +220,7 @@ namespace Auth_WebApplication.Controllers.Authentication
                 var code = await userManager.GeneratePasswordResetTokenAsync(user);
                 var callbackUrl = Url.Action("ResetPassword", "Account", new { userId = user.Id, Token = code },
                     protocol: Request.Scheme);
-                string emailBody =  GetEmailBody("", "Reset Password", callbackUrl, "ResetPassword");
+                string emailBody = GetEmailBody("", "Reset Password", callbackUrl, "ResetPassword");
 
                 bool isSendEmail = await emailSender.EmailSendAsync(forget.Email, "Reset Password", emailBody);
                 if (isSendEmail)
