@@ -1,0 +1,43 @@
+﻿@model AddStudentSubjectVM
+@{
+    ViewData["Title"] = "AddStudent";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<style>
+    .btn-group{
+        display:inline;
+    }
+</style>
+<div class="container">
+    <div class="row">
+        <div class="col-6 offset-3">
+            <form method="post" asp-action="AddStudent" asp-controller="Multi">
+                <div>
+                    <label asp-for="Student.Name" class="mb-2"></label>
+                    <input type="text" asp-for="Student.Name" class="form-control mb-2" placeholder="Enter student name"  />
+                    <span asp-validation-for="Student.Name" class="text-danger"></span>
+                </div>
+                <div>
+                    <label asp-for="Student.Class" class="mb-2"></label>
+                    <select asp-for="Student.Class" class="form-control mb-2">
+                        <option>--Select Class --</option>
+                        <option value="V">V</option>
+                        <option value="VI">VI</option>
+                        <option value="VII">VII</option>
+                        <option value="VIII">VIII</option>
+                        <option value="IX">IX</option>
+                        <option value="X">X</option>
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="SubjectList" class="mb-2"></label>
+                    <select asp-for="SubjectIds" asp-items="Model.SubjectList" class="form-control mb-2 selectpicker" multiple="multiple" data-live-search="true" data-actions-box="true" data-dropup-auto="false" ></select>
+                </div>
+                <div class="d-grid">
+                    <input type="submit" class="btn btn-primary m-2" value="SUBMIT" />
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
